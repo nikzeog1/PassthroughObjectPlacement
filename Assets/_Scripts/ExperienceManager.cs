@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ExperienceManager : MonoBehaviour {
 
     [SerializeField] private OVRSceneManager ovrSceneManager;
     [SerializeField] private LayerMask roomLayer;
+    public OVRSceneAnchor[] sceneAnchors;
+    private List<OVRSemanticClassification> initialClassifications = new List<OVRSemanticClassification>();
     private bool _sceneReady;
     
     [SerializeField] private Transform placementIndicator;
@@ -25,6 +28,13 @@ public class ExperienceManager : MonoBehaviour {
 
     private void SceneInitialised() {
 
+        sceneAnchors = FindObjectsOfType<OVRSceneAnchor>();
+        if (sceneAnchors != null) {
+            foreach (var anchor in sceneAnchors) {
+                var semClass = anchor.GetComponent<OVRSemanticClassification>();
+                initialClassifications.Add(semClass);
+            }
+        }
         _sceneReady = true;
 
     }
@@ -41,10 +51,40 @@ public class ExperienceManager : MonoBehaviour {
             
             SetIndicatorPosition(hitInfo);
             SetIndicatorRotation(hitInfo);
-            
-            DrawDebugTools.DrawRaycastHit(rayOrigin, rayDirection, raycastDistance, hitInfo, 0f);
 
             if (OVRInput.GetDown(actionButton)) {
+                if (hitInfo.transform.parent.TryGetComponent<OVRSemanticClassification>(out OVRSemanticClassification hitClassification)) {
+                    if (initialClassifications.Contains(hitClassification)) {
+                        var label = hitClassification.Labels[0];
+                        switch (label) {
+                            case OVRSceneManager.Classification.WallFace:
+                                Debug.Log(OVRSceneManager.Classification.WallFace);
+                                DrawDebugTools.DrawString3D(hitInfo.point, Quaternion.LookRotation(hitInfo.normal), label, TextAnchor.MiddleCenter, Color.green, 0f, 5f);
+                                GameObject wallContent = Instantiate(wallObject);
+                                wallContent.transform.position = hitInfo.point;
+                                wallContent.transform.rotation = Quaternion.LookRotation(hitInfo.normal);
+                                break;
+                            case OVRSceneManager.Classification.Floor:
+                                Debug.Log(OVRSceneManager.Classification.Floor);
+                                DrawDebugTools.DrawString3D(hitInfo.point, Quaternion.LookRotation(hitInfo.normal), label, TextAnchor.MiddleCenter, Color.green, 0f, 5f);
+                                GameObject floorContent = Instantiate(floorObject);
+                                floorContent.transform.position = hitInfo.point;
+                                floorContent.transform.up = hitInfo.normal;
+                                break;
+                            case OVRSceneManager.Classification.Ceiling:
+                                Debug.Log(OVRSceneManager.Classification.Ceiling);
+                                DrawDebugTools.DrawString3D(hitInfo.point, Quaternion.LookRotation(hitInfo.normal), label, TextAnchor.MiddleCenter, Color.green, 0f, 5f);
+                                GameObject ceilingContent = Instantiate(ceilingObject);
+                                ceilingContent.transform.position = hitInfo.point;
+                                ceilingContent.transform.rotation = Quaternion.FromToRotation(ceilingContent.transform.up, -hitInfo.normal);
+                                break;
+                        }
+                    }
+                }
+            }
+            
+            /*if (OVRInput.GetDown(actionButton)) {
+                
                 float surfaceDot = Vector3.Dot(hitInfo.normal, Vector3.up);
                 if (surfaceDot > 0.99f) {
                     Debug.Log("Floor");
@@ -55,6 +95,7 @@ public class ExperienceManager : MonoBehaviour {
 
                 }
                 else if (surfaceDot < -0.99) {
+                    
                     Debug.Log("Ceiling");
 
                     GameObject newContent = Instantiate(ceilingObject);
@@ -63,14 +104,22 @@ public class ExperienceManager : MonoBehaviour {
 
                 }
                 else {
+                    
                     Debug.Log("Wall");
                     
                     GameObject newContent = Instantiate(wallObject);
                     newContent.transform.position = hitInfo.point;
                     newContent.transform.rotation = Quaternion.LookRotation(hitInfo.normal);
                 }
-                
-            }
+            }*/
+
+            
+
+            DrawDebugTools.DrawRaycastHit(rayOrigin, rayDirection, raycastDistance, hitInfo, 0f);
+
+            
+
+            
             
 
         }
